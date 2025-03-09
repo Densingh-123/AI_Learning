@@ -1,0 +1,2 @@
+# AI_Learning
+ The Course Generator Application is an intelligent content creation tool designed to automate the generation of structured and comprehensive online course materials. This application allows educators, trainers, and content creators to generate full-fledged courses dynamically based on user inputs, ensuring a well-organized learning experience with in-depth explanations, real-world examples, quizzes, and external references.
