@@ -33,7 +33,7 @@ function Hero() {
             <div className="mt-8">
               <button
                 onClick={() => router.push("/dashboard")}
-                className="rounded-lg bg-blue-500 px-8 py-3 text-lg font-semibold text-white shadow-lg transition-all duration-300 hover:bg-blue-700 hover:shadow-2xl focus:ring-4 focus:ring-rose-400 focus:outline-none"
+                className="rounded-lg bg-blue-500 px-8 py-3 text-lg font-semibold text-white shadow-lg transition-all duration-300 hover:bg-blue-700 hover:shadow-2xl focus:ring-4 focus:ring-blue-400 focus:outline-none"
               >
                 Get Started
               </button>

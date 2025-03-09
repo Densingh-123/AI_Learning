@@ -134,12 +134,12 @@ const CreateCourse = () => {
                 { "Language": "JavaScript", "Code": "console.log('Example');", "Explanation": "This prints Example" }
               ],
               "ExternalReferences": [
-                "https://example.com",
-                "https://example2.com"
+                "https://example.com  ",
+                "https://example2.com  "
               ],
               "YouTubeVideos": [
-                "https://www.youtube.com/watch?v=video1",
-                "https://www.youtube.com/watch?v=video2"
+                "https://www.youtube.com/watch?v=video1  ",
+                "https://www.youtube.com/watch?v=video2  "
               ]
             }
           },
@@ -156,7 +156,11 @@ const CreateCourse = () => {
       - **Provide highly detailed explanations as if answering a 10-mark question**.
       - **Avoid short answers—expand on each topic with clear examples and real-world applications**.
       - **Use structured JSON formatting with proper indentation for readability**.
-      - **Ensure no missing chapters or incomplete information.**`;
+      - **Ensure no missing chapters or incomplete information.**
+      - **Include a quiz at the end of each chapter with 10 questions and answers.**
+      - **Ensure that the 10 questions are interactive, and the answers are revealed only when the user clicks on the question.**
+      - **Store all the data in the database and ensure that the video links are relevant and available.**
+      - **Provide a brief description of what each video is about.**`; 
     console.log("📢 Final Prompt Sent for Generation:\n", PROMPT_TEMPLATE);
     const result = await GenerateCourseLayout_AI.sendMessage(PROMPT_TEMPLATE);
     const generatedCourse = JSON.parse(result.response?.text());
@@ -261,7 +265,7 @@ const CreateCourse = () => {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <div className="flex flex-col items-center">
-                    <img src={'/rocket.gif'} alt="Loading..." className="w-24 h-24" />
+                    <img src={'/progress.gif'} alt="Loading..." className="w-24 h-24" />
                     <AlertDialogTitle>Generating Course...</AlertDialogTitle>
                   </div>
                 </AlertDialogHeader>

@@ -1,9 +1,30 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
 import { initializeApp } from "firebase/app";
 import { useUser, UserButton } from "@clerk/nextjs";
-import { FaEdit, FaPlay, FaExternalLinkAlt, FaBook, FaClock, FaUser, FaLayerGroup, FaYoutube, FaCopy, FaLightbulb, FaChevronDown, FaChevronUp } from "react-icons/fa";
+import {
+  FaEdit,
+  FaPlay,
+  FaExternalLinkAlt,
+  FaBook,
+  FaClock,
+  FaUser,
+  FaLayerGroup,
+  FaYoutube,
+  FaCopy,
+  FaLightbulb,
+  FaChevronDown,
+  FaChevronUp,
+  FaArrowLeft,
+  FaArrowRight,
+} from "react-icons/fa";
 import { GiGraduateCap, GiBookshelf } from "react-icons/gi";
 import Image from "next/image";
 import Link from "next/link";
@@ -35,6 +56,11 @@ const CourseLayout = ({ params }) => {
   const [selectedAnswers, setSelectedAnswers] = useState({}); // Track selected answers
   const [showHints, setShowHints] = useState({}); // Track hints visibility
   const [expandedChapters, setExpandedChapters] = useState({}); // Track expanded chapters
+  const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [marks, setMarks] = useState(0);
+  const [totalMarks, setTotalMarks] = useState(0);
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
 
   useEffect(() => {
     const fetchCourseData = async () => {
@@ -62,6 +88,10 @@ const CourseLayout = ({ params }) => {
       ...prev,
       [questionIndex]: option === correctAnswer ? "correct" : "incorrect",
     }));
+
+    if (option === correctAnswer) {
+      setMarks((prev) => prev + 1);
+    }
   };
 
   // Handle hint click
@@ -80,22 +110,89 @@ const CourseLayout = ({ params }) => {
     }));
   };
 
+  // Handle next chapter
+  const handleNextChapter = () => {
+    if (currentChapterIndex < courseData.generatedContent.Chapters.length - 1) {
+      setCurrentChapterIndex((prev) => prev + 1);
+      setCurrentQuestionIndex(0); // Reset question index when changing chapters
+    }
+  };
+
+  // Handle previous chapter
+  const handlePreviousChapter = () => {
+    if (currentChapterIndex > 0) {
+      setCurrentChapterIndex((prev) => prev - 1);
+      setCurrentQuestionIndex(0); // Reset question index when changing chapters
+    }
+  };
+
+  // Handle next question
+  const handleNextQuestion = () => {
+    if (
+      currentQuestionIndex <
+      courseData.generatedContent.Chapters[currentChapterIndex].Content
+        .MultipleChoiceQuestions.length -
+        1
+    ) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+    }
+  };
+
+  // Handle previous question
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex((prev) => prev - 1);
+    }
+  };
+
+  // Save marks to Firestore
+  const saveMarksToFirestore = async () => {
+    const userDocRef = doc(db, "users", user.id);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (userDocSnap.exists()) {
+      await updateDoc(userDocRef, {
+        marks: marks,
+        totalMarks: courseData.generatedContent.Chapters.length * 10,
+      });
+    } else {
+      await setDoc(userDocRef, {
+        marks: marks,
+        totalMarks: courseData.generatedContent.Chapters.length * 10,
+      });
+    }
+  };
+
+  // Handle quiz submission
+  const handleQuizSubmission = () => {
+    setQuizSubmitted(true);
+    saveMarksToFirestore();
+  };
+
   if (loading) {
     return <div className="text-white text-center py-10">Loading...</div>;
   }
 
   if (!courseData) {
-    return <div className="text-white text-center py-10">Course not found.</div>;
+    return (
+      <div className="text-white text-center py-10">Course not found.</div>
+    );
   }
 
   // Generate a random banner image path
-  const getRandomBanner = () => `/banner${Math.floor(Math.random() * 10) + 1}.jpg`;
+  const getRandomBanner = () =>
+    `/banner${Math.floor(Math.random() * 10) + 1}.jpg`;
 
   // Copy code to clipboard
   const copyToClipboard = (code) => {
     navigator.clipboard.writeText(code);
     alert("Code copied to clipboard!");
   };
+
+  const currentChapter =
+    courseData.generatedContent.Chapters[currentChapterIndex];
+  const currentQuestion =
+    currentChapter.Content.MultipleChoiceQuestions[currentQuestionIndex];
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-50 to-purple-50">
@@ -113,10 +210,12 @@ const CourseLayout = ({ params }) => {
           <div className="absolute inset-0 bg-black opacity-20"></div>
         </div>
         <div className="absolute inset-0 flex items-center ml-30">
-        <div className="text-black font-[family-name:var(--font-geist-mono)]">
+          <div className="text-black font-[family-name:var(--font-geist-mono)]">
             <h1 className="text-7xl font-bold">{courseData.courseName}</h1>
             <p className="text-xl mt-4">{courseData.category}</p>
-            <p className="text-lg mt-2">Instructor: {courseData.userFullName}</p>
+            <p className="text-lg mt-2">
+              Instructor: {courseData.userFullName}
+            </p>
           </div>
         </div>
         <div className="absolute bottom-6 right-6 w-20 h-20 border-r-4 border-gray-400 rounded-full shadow-lg flex items-center justify-center bg-white">
@@ -128,7 +227,9 @@ const CourseLayout = ({ params }) => {
         {/* Course Header */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center">
-            <h1 className="text-4xl font-bold text-gray-800">{courseData.courseName}</h1>
+            <h1 className="text-4xl font-bold text-gray-800">
+              {courseData.courseName}
+            </h1>
             <button className="ml-4 text-xl text-blue-500 hover:text-blue-700">
               <FaEdit />
             </button>
@@ -155,19 +256,31 @@ const CourseLayout = ({ params }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="flex items-center space-x-2">
               <MdOutlineSignalCellularAlt className="text-blue-500" />
-              <p><span className="font-semibold">Category:</span> {courseData.category}</p>
+              <p>
+                <span className="font-semibold">Category:</span>{" "}
+                {courseData.category}
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <FaClock className="text-blue-500" />
-              <p><span className="font-semibold">Duration:</span> {courseData.duration}</p>
+              <p>
+                <span className="font-semibold">Duration:</span>{" "}
+                {courseData.duration}
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <FaLayerGroup className="text-blue-500" />
-              <p><span className="font-semibold">Chapters:</span> {courseData.numberOfChapters}</p>
+              <p>
+                <span className="font-semibold">Chapters:</span>{" "}
+                {courseData.numberOfChapters}
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <FaUser className="text-blue-500" />
-              <p><span className="font-semibold">Instructor:</span> {courseData.userFullName}</p>
+              <p>
+                <span className="font-semibold">Instructor:</span>{" "}
+                {courseData.userFullName}
+              </p>
             </div>
           </div>
         </div>
@@ -179,11 +292,11 @@ const CourseLayout = ({ params }) => {
           </h2>
           <ul className="space-y-4">
             {courseData.generatedContent?.Chapters?.map((chapter, index) => (
-              <li 
-                key={index} 
+              <li
+                key={index}
                 className="bg-gradient-to-r from-blue-50 to-blue-100 p-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
               >
-                <div 
+                <div
                   className="flex items-center justify-between cursor-pointer"
                   onClick={() => handleChapterToggle(index)}
                 >
@@ -191,76 +304,120 @@ const CourseLayout = ({ params }) => {
                     <span className="bg-blue-500 text-white font-semibold w-8 h-8 flex items-center justify-center rounded-full mr-3 shadow-md">
                       {index + 1}
                     </span>
-                    <h3 className="text-lg font-semibold text-gray-900">{chapter.ChapterName}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {chapter.ChapterName}
+                    </h3>
                   </div>
                   <div>
-                    {expandedChapters[index] ? <FaChevronUp /> : <FaChevronDown />}
+                    {expandedChapters[index] ? (
+                      <FaChevronUp />
+                    ) : (
+                      <FaChevronDown />
+                    )}
                   </div>
                 </div>
                 {expandedChapters[index] && (
                   <div className="mt-4">
-                    <p className="text-gray-600 mb-3">{chapter.Content.DetailedExplanation}</p>
+                    <p className="text-lg text-gray-700 leading-relaxed mb-4 bg-gray-100 p-4 rounded-lg shadow-sm">
+                      {chapter.Content.DetailedExplanation}
+                    </p>
 
                     {/* Definitions */}
                     <div className="mt-4">
-                      <h4 className="text-lg font-semibold mb-2">Definitions</h4>
+                      <h4 className="text-lg font-semibold mb-2">
+                        Definitions
+                      </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {chapter.Content?.Definitions?.map((definition, idx) => (
-                          <div key={idx} className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
-                            <p className="text-lg font-semibold text-blue-600">{definition.Term}</p>
-                            <p className="text-gray-600">{definition.Meaning}</p>
-                          </div>
-                        ))}
+                        {chapter.Content?.Definitions?.map(
+                          (definition, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                            >
+                              <p className="text-lg font-semibold text-blue-600">
+                                {definition.Term}
+                              </p>
+                              <p className="text-gray-600">
+                                {definition.Meaning}
+                              </p>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
 
                     {/* Multiple Choice Questions */}
                     <div className="mt-4">
-                      <h4 className="text-lg font-semibold mb-2">Multiple Choice Questions</h4>
+                      <h4 className="text-lg font-semibold mb-2">
+                        Multiple Choice Questions
+                      </h4>
                       <ul className="space-y-4">
-                        {chapter.Content?.MultipleChoiceQuestions?.map((question, idx) => (
-                          <li key={idx} className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
-                            <p className="text-lg font-semibold text-gray-900">{question.Question}</p>
-                            <ul className="mt-2 space-y-2">
-                              {question.Options.map((option, optIdx) => (
-                                <li
-                                  key={optIdx}
-                                  className={`p-3 rounded-md cursor-pointer transition-all duration-200 ${
-                                    selectedAnswers[idx] === "correct" && option === question.Answer
-                                      ? "border-2 border-green-500 bg-green-50"
-                                      : selectedAnswers[idx] === "incorrect" && option !== question.Answer
-                                      ? "border-2 border-red-500 bg-red-50"
-                                      : "border border-gray-200 hover:bg-blue-50"
-                                  }`}
-                                  onClick={() => handleAnswerSelect(idx, option, question.Answer)}
-                                >
-                                  {option}
-                                </li>
-                              ))}
-                            </ul>
-                            <button
-                              onClick={() => handleHintClick(idx)}
-                              className="mt-2 flex items-center text-blue-600 hover:text-blue-800"
+                        {chapter.Content?.MultipleChoiceQuestions?.map(
+                          (question, idx) => (
+                            <li
+                              key={idx}
+                              className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
                             >
-                              <FaLightbulb className="mr-2" /> Hint
-                            </button>
-                            {showHints[idx] && (
-                              <p className="mt-2 text-green-600">Correct Answer: {question.Answer}</p>
-                            )}
-                          </li>
-                        ))}
+                              <p className="text-lg font-semibold text-gray-900">
+                                {question.Question}
+                              </p>
+                              <ul className="mt-2 space-y-2">
+                                {question.Options.map((option, optIdx) => (
+                                  <li
+                                    key={optIdx}
+                                    className={`p-3 rounded-md cursor-pointer transition-all duration-200 ${
+                                      selectedAnswers[idx] === "correct" &&
+                                      option === question.Answer
+                                        ? "border-2 border-green-500 bg-green-50"
+                                        : selectedAnswers[idx] ===
+                                            "incorrect" &&
+                                          option !== question.Answer
+                                        ? "border-2 border-red-500 bg-red-50"
+                                        : "border border-gray-200 hover:bg-blue-50"
+                                    }`}
+                                    onClick={() =>
+                                      handleAnswerSelect(
+                                        idx,
+                                        option,
+                                        question.Answer
+                                      )
+                                    }
+                                  >
+                                    {option}
+                                  </li>
+                                ))}
+                              </ul>
+                              <button
+                                onClick={() => handleHintClick(idx)}
+                                className="mt-2 flex items-center text-blue-600 hover:text-blue-800"
+                              >
+                                <FaLightbulb className="mr-2" /> Hint
+                              </button>
+                              {showHints[idx] && (
+                                <p className="mt-2 text-green-600">
+                                  Correct Answer: {question.Answer}
+                                </p>
+                              )}
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
 
                     {/* Code Examples */}
                     <div className="mt-4">
-                      <h4 className="text-lg font-semibold mb-2">Code Examples</h4>
+                      <h4 className="text-lg font-semibold mb-2">
+                        Code Examples
+                      </h4>
                       <ul className="space-y-2">
                         {chapter.Content?.CodeExamples?.map((example, idx) => (
                           <li key={idx} className="text-gray-600">
                             <p className="font-semibold">{example.Title}</p>
                             <div className="relative">
-                              <SyntaxHighlighter language="javascript" style={dracula}>
+                              <SyntaxHighlighter
+                                language="javascript"
+                                style={dracula}
+                              >
                                 {example.Code}
                               </SyntaxHighlighter>
                               <button
@@ -277,38 +434,54 @@ const CourseLayout = ({ params }) => {
 
                     {/* External References */}
                     <div className="mt-4">
-                      <h4 className="text-lg font-semibold mb-2">External References</h4>
+                      <h4 className="text-lg font-semibold mb-2">
+                        External References
+                      </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {chapter.Content?.ExternalReferences?.map((reference, idx) => (
-                          <div key={idx} className="relative rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300">
-                            <Image
-                              src={`/banner${Math.floor(Math.random() * 10) + 1}.jpg`}
-                              alt="Reference Banner"
-                              width={300}
-                              height={150}
-                              className="w-full h-40 object-cover"
-                            />
-                            <a
-                              href={reference}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-1 text-white font-semibold text-lg hover:bg-opacity-70"
+                        {chapter.Content?.ExternalReferences?.map(
+                          (reference, idx) => (
+                            <div
+                              key={idx}
+                              className="relative rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300"
                             >
-                              Visit Link
-                            </a>
-                          </div>
-                        ))}
+                              <Image
+                                src={`/banner${
+                                  Math.floor(Math.random() * 10) + 1
+                                }.jpg`}
+                                alt="Reference Banner"
+                                width={300}
+                                height={150}
+                                className="w-full h-40 object-cover"
+                              />
+                              <a
+                                href={reference}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-1 text-white font-semibold text-lg hover:bg-opacity-70"
+                              >
+                                Visit Link
+                              </a>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
 
                     {/* YouTube Videos */}
                     <div className="mt-4">
-                      <h4 className="text-lg font-semibold mb-2">YouTube Videos</h4>
+                      <h4 className="text-lg font-semibold mb-2">
+                        YouTube Videos
+                      </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {chapter.Content?.YouTubeVideos?.map((video, idx) => (
-                          <div key={idx} className="relative rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300">
+                          <div
+                            key={idx}
+                            className="relative rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300"
+                          >
                             <Image
-                              src={`/banner${Math.floor(Math.random() * 10) + 1}.jpg`}
+                              src={`/banner${
+                                Math.floor(Math.random() * 10) + 1
+                              }.jpg`}
                               alt="YouTube Video Banner"
                               width={300}
                               height={150}
@@ -332,6 +505,141 @@ const CourseLayout = ({ params }) => {
             ))}
           </ul>
         </div>
+
+        {/* Navigation Buttons */}
+        {/* <div className="flex justify-between mt-8">
+          <button
+            onClick={handlePreviousChapter}
+            disabled={currentChapterIndex === 0}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg disabled:bg-gray-400"
+          >
+            <FaArrowLeft /> Previous
+          </button>
+          <button
+            onClick={handleNextChapter}
+            disabled={currentChapterIndex === courseData.generatedContent.Chapters.length - 1}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg disabled:bg-gray-400"
+          >
+            Next <FaArrowRight />
+          </button>
+        </div> */}
+
+        {/* Quiz Section */}
+        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center">
+            <GiBookshelf className="mr-2 text-blue-500" /> Quiz
+          </h2>
+          <div className="space-y-4">
+            <div className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300">
+              <p className="text-lg font-semibold text-gray-900">
+                {currentQuestion.Question}
+              </p>
+              <ul className="mt-2 space-y-2">
+                {currentQuestion.Options.map((option, optIdx) => (
+                  <li
+                    key={optIdx}
+                    className={`p-3 rounded-md cursor-pointer transition-all duration-200 ${
+                      selectedAnswers[currentQuestionIndex] === "correct" &&
+                      option === currentQuestion.Answer
+                        ? "border-2 border-green-500 bg-green-50"
+                        : selectedAnswers[currentQuestionIndex] ===
+                            "incorrect" && option !== currentQuestion.Answer
+                        ? "border-2 border-red-500 bg-red-50"
+                        : "border border-gray-200 hover:bg-blue-50"
+                    }`}
+                    onClick={() =>
+                      handleAnswerSelect(
+                        currentQuestionIndex,
+                        option,
+                        currentQuestion.Answer
+                      )
+                    }
+                  >
+                    {option}
+                  </li>
+                ))}
+              </ul>
+              {/* <button
+                onClick={() => handleHintClick(currentQuestionIndex)}
+                className="mt-2 flex items-center text-blue-600 hover:text-blue-800"
+              >
+                <FaLightbulb className="mr-2" /> Hint
+              </button> */}
+              {showHints[currentQuestionIndex] && (
+                <p className="mt-2 text-green-600">
+                  Correct Answer: {currentQuestion.Answer}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mt-8">
+            <button
+              onClick={handlePreviousQuestion}
+              disabled={currentQuestionIndex === 0}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg disabled:bg-gray-400"
+            >
+              <FaArrowLeft /> Previous
+            </button>
+            {currentQuestionIndex <
+            currentChapter.Content.MultipleChoiceQuestions.length - 1 ? (
+              <button
+                onClick={handleNextQuestion}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg"
+              >
+                Next <FaArrowRight />
+              </button>
+            ) : (
+              <button
+                onClick={handleQuizSubmission}
+                className="bg-green-500 text-white px-4 py-2 rounded-lg"
+              >
+                Submit
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Result Section */}
+        {quizSubmitted && (
+  <div className="mt-8 flex justify-center">
+    <div className="bg-white p-6 rounded-2xl shadow-lg text-center w-full max-w-md">
+      <h2 className="text-2xl font-semibold text-gray-800">
+        Your Marks: {marks}/
+        {currentChapter.Content.MultipleChoiceQuestions.length}
+      </h2>
+      {marks > currentChapter.Content.MultipleChoiceQuestions.length / 2 ? (
+        <div className="mt-4">
+          <img
+            src="/success.gif"
+            alt="Success"
+            width={200}
+            height={200}
+            className="mx-auto"
+          />
+          <p className="text-green-600 text-xl mt-2 font-medium">
+            🎉 Congratulations! You passed the quiz.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4">
+          <img
+            src="/fail.gif"
+            alt="Fail"
+            width={200}
+            height={200}
+            className="mx-auto"
+          />
+          <p className="text-red-600 text-xl mt-2 font-medium">
+            ❌ Sorry! You failed the quiz.
+          </p>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
       </div>
     </div>
   );
