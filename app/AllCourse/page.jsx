@@ -2,12 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import { initializeApp } from "firebase/app";
-import { useUser, UserButton } from "@clerk/nextjs";
-import { FaEdit, FaPlay, FaExternalLinkAlt, FaBook, FaClock, FaUser, FaLayerGroup, FaYoutube } from "react-icons/fa";
-import { GiGraduateCap, GiBookshelf } from "react-icons/gi";
-import Image from "next/image";
-import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
+import { FaClock, FaUser, FaLayerGroup } from "react-icons/fa";
 import { MdOutlineSignalCellularAlt } from "react-icons/md";
+import Image from "next/image";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -61,36 +59,39 @@ const CourseLayout = () => {
   const getRandomBanner = () => `/banner${Math.floor(Math.random() * 10) + 1}.jpg`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-50 to-purple-50">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-8">All Courses</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div className="min-h-screen bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-8">
+      <div className="container mx-auto">
+        <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">All Courses</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {courses.map((course) => (
-            <div key={course.id} className="bg-white p-6 rounded-lg shadow-md">
+            <div key={course.id} className="bg-white p-5 rounded-lg shadow-lg">
               <Image
                 src={course.coverImage || getRandomBanner()}
                 alt="Course Banner"
                 width={400}
                 height={200}
-                className="rounded-lg mb-4"
+                className="rounded-lg w-full h-40 object-cover mb-4"
               />
               <h2 className="text-2xl font-bold text-gray-800">{course.courseName}</h2>
               <p className="text-gray-600 mb-4">{course.courseDescription}</p>
-              <div className="flex items-center space-x-2">
-                <MdOutlineSignalCellularAlt className="text-blue-500" />
-                <p><span className="font-semibold">Category:</span> {course.category}</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <FaClock className="text-blue-500" />
-                <p><span className="font-semibold">Duration:</span> {course.duration}</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <FaLayerGroup className="text-blue-500" />
-                <p><span className="font-semibold">Chapters:</span> {course.numberOfChapters}</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <FaUser className="text-blue-500" />
-                <p><span className="font-semibold">Instructor:</span> {course.userFullName}</p>
+              
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <MdOutlineSignalCellularAlt className="text-blue-500" />
+                  <p><span className="font-semibold">Category:</span> {course.category}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <FaClock className="text-blue-500" />
+                  <p><span className="font-semibold">Duration:</span> {course.duration}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <FaLayerGroup className="text-blue-500" />
+                  <p><span className="font-semibold">Chapters:</span> {course.numberOfChapters}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <FaUser className="text-blue-500" />
+                  <p><span className="font-semibold">Instructor:</span> {course.userFullName}</p>
+                </div>
               </div>
             </div>
           ))}
